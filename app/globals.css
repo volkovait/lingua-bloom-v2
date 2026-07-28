@@ -1,0 +1,202 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* Lingua-Bloom — палитра vibe-text (hex, без color-mix для предсказуемости в Tailwind v4) */
+:root {
+  --lb-cream: #efe2ba;
+  --lb-navy: #4056a1;
+  --lb-terracotta: #f13c20;
+  --lb-gold: #d79922;
+  --lb-text: #333333;
+  --lb-white: #ffffff;
+  --lb-success: #4caf50;
+  --lb-error: #e53935;
+  --lb-progress-track: #c5cbe3;
+
+  --background: #efe2ba;
+  --foreground: #333333;
+  --card: #ffffff;
+  --card-foreground: #333333;
+  --popover: #ffffff;
+  --popover-foreground: #333333;
+  --primary: #4056a1;
+  --primary-foreground: #ffffff;
+  --secondary: #f5edd4;
+  --secondary-foreground: #333333;
+  --muted: #e8dcc4;
+  --muted-foreground: #5c5c5c;
+  --accent: #d79922;
+  --accent-foreground: #ffffff;
+  --destructive: #e53935;
+  --destructive-foreground: #ffffff;
+  --border: #c5cbe3;
+  --input: #efe2ba;
+  --ring: #4056a1;
+  --chart-1: #4056a1;
+  --chart-2: #f13c20;
+  --chart-3: #d79922;
+  --chart-4: #4caf50;
+  --chart-5: #c5cbe3;
+  --radius: 0.75rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #333333;
+  --sidebar-primary: #4056a1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #efe2ba;
+  --sidebar-accent-foreground: #333333;
+  --sidebar-border: #c5cbe3;
+  --sidebar-ring: #4056a1;
+
+  --bloom-terracotta: #f13c20;
+  --bloom-navy: #4056a1;
+  --bloom-gold: #d79922;
+  --success: #4caf50;
+  --success-foreground: #ffffff;
+}
+
+/* Сохраняем фирменную светлую палитру даже при .dark — по ТЗ vibe-text */
+.dark {
+  --background: #efe2ba;
+  --foreground: #333333;
+  --card: #ffffff;
+  --card-foreground: #333333;
+  --popover: #ffffff;
+  --popover-foreground: #333333;
+  --primary: #4056a1;
+  --primary-foreground: #ffffff;
+  --secondary: #f5edd4;
+  --secondary-foreground: #333333;
+  --muted: #e8dcc4;
+  --muted-foreground: #5c5c5c;
+  --accent: #d79922;
+  --accent-foreground: #ffffff;
+  --destructive: #e53935;
+  --destructive-foreground: #ffffff;
+  --border: #c5cbe3;
+  --input: #efe2ba;
+  --ring: #4056a1;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #333333;
+  --sidebar-primary: #4056a1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #efe2ba;
+  --sidebar-accent-foreground: #333333;
+  --sidebar-border: #c5cbe3;
+  --sidebar-ring: #4056a1;
+}
+
+@theme inline {
+  --font-sans: var(--font-open-sans), 'Open Sans', system-ui, sans-serif;
+  --font-serif: var(--font-montserrat), 'Montserrat', system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-lb-cream: #efe2ba;
+  --color-lb-navy: #4056a1;
+  --color-lb-terracotta: #f13c20;
+  --color-lb-gold: #d79922;
+  --color-lb-text: #333333;
+  --color-lb-white: #ffffff;
+  --color-lb-success: #4caf50;
+  --color-lb-error: #e53935;
+  --color-lb-progress-track: #c5cbe3;
+  --color-bloom-terracotta: #f13c20;
+  --color-bloom-navy: #4056a1;
+  --color-bloom-gold: #d79922;
+  --color-success: #4caf50;
+  --color-success-foreground: #ffffff;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Главная: декоративные акценты */
+.lb-blob-gold {
+  background: radial-gradient(circle, color-mix(in srgb, #d79922 35%, transparent) 0%, transparent 70%);
+}
+.lb-blob-terracotta {
+  background: radial-gradient(circle, color-mix(in srgb, #f13c20 28%, transparent) 0%, transparent 70%);
+}
+
+.gradient-bloom {
+  background: linear-gradient(135deg, #efe2ba 0%, color-mix(in srgb, #d79922 18%, #efe2ba) 50%, #efe2ba 100%);
+}
+
+.gradient-bloom-text {
+  color: #4056a1;
+}
+
+.btn-cta-gold {
+  background-color: #d79922;
+  color: #ffffff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-cta-gold:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px color-mix(in srgb, #d79922 40%, transparent);
+}
+
+/* Панель прогресса: «свечение» терракотового значка */
+.lb-achievement-glow {
+  box-shadow:
+    0 0 0 2px #c5cbe3,
+    0 0 24px color-mix(in srgb, #f13c20 45%, transparent);
+}
+
+/* Полоса прогресса vibe-text */
+.lb-progress-bar {
+  height: 0.625rem;
+  border-radius: 9999px;
+  background-color: #c5cbe3;
+  overflow: hidden;
+}
+.lb-progress-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background-color: #d79922;
+  transition: width 0.35s ease;
+}

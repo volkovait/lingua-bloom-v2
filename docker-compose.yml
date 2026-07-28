@@ -1,0 +1,15 @@
+# Production: только приложение. БД — внешний Supabase (переменные из .env.production).
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+    env_file:
+      - .env.production
+    ports:
+      - '3000:3000'
+    restart: unless-stopped
