@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
+import { copyCookiesTo, updateSession } from '@/src/auth/update-session'
+
 const PROTECTED_PREFIXES = ['/', '/upload', '/learn', '/history']
 const PUBLIC_EXACT = new Set(['/auth/login', '/auth/sign-up', '/auth/sign-up-success', '/auth/error'])
 const PUBLIC_PREFIXES = ['/auth/callback', '/auth/signout', '/api/health']
@@ -26,22 +28,30 @@ function isProtectedPath(pathname: string): boolean {
 }
 
 /**
- * Минимальный guard роутов. При AUTH_DISABLED пропускает всё.
- * Полная проверка сессии Supabase выполняется в серверных компонентах/роутах.
+ * Обязательно обновляет сессию Supabase на каждом запросе (включая /api/*).
+ * При AUTH_DISABLED — без guard'а, но refresh всё равно безопасен (просто no-op без cookies).
  */
-export function middleware(request: NextRequest) {
-  if (authDisabled()) return NextResponse.next()
+export async function middleware(request: NextRequest) {
+  if (authDisabled()) {
+    return NextResponse.next()
+  }
+
+  const { response, user } = await updateSession(request)
 
   const { pathname } = request.nextUrl
-  if (!isProtectedPath(pathname)) return NextResponse.next()
+  if (!isProtectedPath(pathname)) {
+    return response
+  }
 
-  const hasSupabaseCookie = request.cookies.getAll().some((cookie) => cookie.name.startsWith('sb-'))
-  if (!hasSupabaseCookie) {
+  if (!user) {
     const loginUrl = new URL('/auth/login', request.url)
     loginUrl.searchParams.set('next', pathname)
-    return NextResponse.redirect(loginUrl)
+    const redirectResponse = NextResponse.redirect(loginUrl)
+    copyCookiesTo(response, redirectResponse)
+    return redirectResponse
   }
-  return NextResponse.next()
+
+  return response
 }
 
 export const config = {
