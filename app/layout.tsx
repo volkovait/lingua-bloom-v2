@@ -35,6 +35,14 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: LABELS.META_AUTHOR_NAME }],
   creator: LABELS.META_AUTHOR_NAME,
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
   openGraph: {
     type: 'website',
     locale: 'ru_RU',
