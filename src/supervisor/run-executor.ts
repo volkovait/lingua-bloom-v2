@@ -1,3 +1,4 @@
+import { HumanMessage } from '@langchain/core/messages'
 import { Command } from '@langchain/langgraph'
 
 import { createServiceRoleClient } from '@/src/db/supabase'
@@ -36,8 +37,15 @@ function buildInitialState(input: {
     phase: 'init',
     errorCode: '',
     errorMessage: '',
+    messages: [],
   } satisfies GenerationState
-  return { ...defaults, ...input.initial }
+  const merged = { ...defaults, ...input.initial }
+  if (merged.messages.length === 0) {
+    merged.messages = [
+      new HumanMessage('Сгенерируй интерактивный тест из загруженного материала.'),
+    ]
+  }
+  return merged
 }
 
 /**

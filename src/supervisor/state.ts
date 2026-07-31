@@ -1,9 +1,11 @@
-import { Annotation } from '@langchain/langgraph'
+import { Annotation, MessagesAnnotation } from '@langchain/langgraph'
 
 import type { MaterialPart } from '@/src/agents/split-parts'
 
 /** Состояние сессии генерации (сериализуется в checkpointer). */
 export const GenerationStateAnnotation = Annotation.Root({
+  ...MessagesAnnotation.spec,
+
   userId: Annotation<string>(),
   runId: Annotation<string>(),
   threadId: Annotation<string>(),
@@ -22,27 +24,36 @@ export const GenerationStateAnnotation = Annotation.Root({
     reducer: (left, right) => right ?? left,
   }),
 
-  correctAnswersHint: Annotation<string>({ default: () => '', reducer: (l, r) => r ?? l }),
-  autoSolveRequested: Annotation<boolean>({ default: () => false, reducer: (l, r) => r ?? l }),
+  correctAnswersHint: Annotation<string>({ default: () => '', reducer: (left, right) => right ?? left }),
+  autoSolveRequested: Annotation<boolean>({ default: () => false, reducer: (left, right) => right ?? left }),
 
-  materialRelevant: Annotation<boolean>({ default: () => true, reducer: (l, r) => r ?? l }),
-  relevanceMessage: Annotation<string>({ default: () => '', reducer: (l, r) => r ?? l }),
+  materialRelevant: Annotation<boolean>({ default: () => true, reducer: (left, right) => right ?? left }),
+  relevanceMessage: Annotation<string>({ default: () => '', reducer: (left, right) => right ?? left }),
 
-  planDraft: Annotation<string>({ default: () => '', reducer: (l, r) => r ?? l }),
+  planDraft: Annotation<string>({ default: () => '', reducer: (left, right) => right ?? left }),
 
-  parts: Annotation<MaterialPart[]>({ default: () => [], reducer: (l, r) => r ?? l }),
+  parts: Annotation<MaterialPart[]>({ default: () => [], reducer: (left, right) => right ?? left }),
 
   /** JSON.stringify(LessonSpec) после сборки. */
-  specJson: Annotation<string | null>({ default: () => null, reducer: (l, r) => (r === undefined ? l : r) }),
-  validationWarnings: Annotation<string[]>({ default: () => [], reducer: (l, r) => r ?? l }),
-  autoSolveDisclaimer: Annotation<string>({ default: () => '', reducer: (l, r) => r ?? l }),
+  specJson: Annotation<string | null>({
+    default: () => null,
+    reducer: (left, right) => (right === undefined ? left : right),
+  }),
+  validationWarnings: Annotation<string[]>({ default: () => [], reducer: (left, right) => right ?? left }),
+  autoSolveDisclaimer: Annotation<string>({ default: () => '', reducer: (left, right) => right ?? left }),
 
-  htmlBody: Annotation<string | null>({ default: () => null, reducer: (l, r) => (r === undefined ? l : r) }),
-  lessonId: Annotation<string | null>({ default: () => null, reducer: (l, r) => (r === undefined ? l : r) }),
+  htmlBody: Annotation<string | null>({
+    default: () => null,
+    reducer: (left, right) => (right === undefined ? left : right),
+  }),
+  lessonId: Annotation<string | null>({
+    default: () => null,
+    reducer: (left, right) => (right === undefined ? left : right),
+  }),
 
-  phase: Annotation<string>({ default: () => 'init', reducer: (l, r) => r ?? l }),
-  errorCode: Annotation<string>({ default: () => '', reducer: (l, r) => r ?? l }),
-  errorMessage: Annotation<string>({ default: () => '', reducer: (l, r) => r ?? l }),
+  phase: Annotation<string>({ default: () => 'init', reducer: (left, right) => right ?? left }),
+  errorCode: Annotation<string>({ default: () => '', reducer: (left, right) => right ?? left }),
+  errorMessage: Annotation<string>({ default: () => '', reducer: (left, right) => right ?? left }),
 })
 
 export type GenerationState = typeof GenerationStateAnnotation.State

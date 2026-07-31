@@ -45,6 +45,7 @@ function makeInitial(partial: Partial<GenerationState>): GenerationState {
     phase: 'init',
     errorCode: '',
     errorMessage: '',
+    messages: [],
     ...partial,
   }
 }
