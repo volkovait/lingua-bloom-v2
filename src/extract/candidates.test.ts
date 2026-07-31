@@ -66,4 +66,11 @@ describe('extractCandidates', () => {
     expect(candidates).toHaveLength(0)
     expect(hasReadyExercises).toBe(false)
   })
+
+  it('hasReadyExercises true при одном вопросе MCQ', () => {
+    const text = ['1. One question?', 'A) yes', 'B) no'].join('\n')
+    const { candidates, hasReadyExercises } = extractCandidates(text)
+    expect(candidates).toHaveLength(1)
+    expect(hasReadyExercises).toBe(true)
+  })
 })

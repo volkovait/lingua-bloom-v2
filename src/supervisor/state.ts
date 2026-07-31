@@ -24,6 +24,12 @@ export const GenerationStateAnnotation = Annotation.Root({
     reducer: (left, right) => right ?? left,
   }),
 
+  /** reproduce_test — воспроизвести готовые задания; generate_from_content — составить новые. */
+  materialIntent: Annotation<'reproduce_test' | 'generate_from_content'>({
+    default: () => 'generate_from_content',
+    reducer: (left, right) => right ?? left,
+  }),
+
   correctAnswersHint: Annotation<string>({ default: () => '', reducer: (left, right) => right ?? left }),
   autoSolveRequested: Annotation<boolean>({ default: () => false, reducer: (left, right) => right ?? left }),
 

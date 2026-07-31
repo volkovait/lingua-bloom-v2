@@ -2,7 +2,7 @@
 
 Платформа для учителей и репетиторов: материал (текст или PDF) за пару минут превращается в интерактивный HTML-тест с помощью ИИ. Девиз — **«урок на раз-два»**.
 
-Стек: **Next.js 16**, **LangGraph** (детерминированный supervisor-граф), **OpenAI-совместимый LLM**, **Supabase** (Auth + Postgres).
+Стек: **Next.js 16**, **LangGraph** ([`@langchain/langgraph-supervisor`](https://www.npmjs.com/package/@langchain/langgraph-supervisor) + worker-агенты), **OpenAI-совместимый LLM**, **Supabase** (Auth + Postgres).
 
 ## Функциональность
 
@@ -22,10 +22,10 @@
 | `components/` | Оболочка приложения, чат-workspace, shadcn/ui |
 | `src/config/` | Типизированный доступ к env |
 | `src/llm/` | OpenAI-совместимый клиент + structured output |
-| `src/extract/` | Extract-first: PDF → текст, эвристики готовых заданий |
-| `src/agents/` | LLM-воркеры: classify, relevance, plan, split, validate, generate, solve |
-| `src/supervisor/` | LangGraph: state, graph, run-executor, Postgres checkpointer |
-| `src/lesson-spec/` | Zod-схема урока, normalize / coerce / prune / finalize |
+| `src/extract/` | Extract-first: PDF → текст, парсер готовых заданий (MCQ, gap, bracketGap), `detect-intent` |
+| `src/agents/` | LLM-воркеры: classify (+ `materialIntent`), relevance, plan, split, validate, generate, solve |
+| `src/supervisor/` | LangGraph supervisor: workers, router, run-executor, Postgres checkpointer |
+| `src/lesson-spec/` | Zod-схема, normalize / coerce / prune / finalize, `map-candidates-to-spec`, `fidelity-check` |
 | `src/html/` | Сборка и санация HTML урока |
 | `src/db/` | Клиенты Supabase + runs / events / lessons / telegram settings |
 | `src/telegram/` | Отправка результатов теста в Telegram Bot API |
@@ -60,8 +60,10 @@ flowchart LR
 
 ### Ключевые принципы
 
-- **Детерминированный граф** — строгий педагогический пайплайн с HITL на плане и ответах.
-- **Extract-first** — если в материале уже есть задания, парсер извлекает их; LLM валидирует/нормализует, а не выдумывает лишнее.
+- **Supervisor + worker-агенты** — [`createSupervisor`](src/supervisor/graph.ts) координирует шаги пайплайна; маршрутизация детерминирована через `resolveNextHandoff`.
+- **Extract-first** — если в материале уже есть задания, парсер извлекает их; на reproduce-пути LLM не добавляет новые вопросы.
+- **`materialIntent`** — `reproduce_test` (готовый тест → только воспроизведение) vs `generate_from_content` (консервативная генерация по тексту).
+- **Fidelity guard** — после сборки spec проверяется, что число вопросов и формулировки соответствуют извлечённым кандидатам ([`fidelity-check.ts`](src/lesson-spec/fidelity-check.ts)).
 - **Один LLM-провайдер** — любой OpenAI-совместимый API через `OPENAI_BASE_URL` (OpenAI, Polza.ai, OpenRouter…).
 
 ### ИИ-агенты (LangGraph)
@@ -92,16 +94,20 @@ flowchart TD
 
 | Узел | Назначение | Файл |
 | ---- | ---------- | ---- |
-| `classify` | Готовый материал vs сырой (нужен план) | [`src/agents/classify-material.ts`](src/agents/classify-material.ts) |
+| `classify` | Pipeline (raw/ready) + intent (`reproduce_test` / `generate_from_content`) | [`src/agents/classify-material.ts`](src/agents/classify-material.ts), [`src/extract/detect-intent.ts`](src/extract/detect-intent.ts) |
 | `relevance_*` | Релевантность для обучения | [`src/agents/check-relevance.ts`](src/agents/check-relevance.ts) |
 | `plan_draft` / `plan_hitl` | Черновик плана + HITL | [`src/agents/draft-lesson-plan.ts`](src/agents/draft-lesson-plan.ts) |
 | `split` | Разбиение на части | [`src/agents/split-parts.ts`](src/agents/split-parts.ts) |
 | `answers` | HITL: эталон или авто-ответы | — |
-| `assemble_spec` | Extract + validate / generate → `LessonSpec` | [`src/extract/`](src/extract/), [`src/agents/generate-spec.ts`](src/agents/generate-spec.ts), [`src/agents/validate-extracted.ts`](src/agents/validate-extracted.ts) |
+| `assemble_spec` | Reproduce: mapper → finalize → fidelity; иначе generate | [`src/extract/candidates.ts`](src/extract/candidates.ts), [`src/lesson-spec/map-candidates-to-spec.ts`](src/lesson-spec/map-candidates-to-spec.ts), [`src/agents/validate-extracted.ts`](src/agents/validate-extracted.ts), [`src/agents/generate-spec.ts`](src/agents/generate-spec.ts) |
 | `auto_solve` | Автоподбор эталонов | [`src/agents/solve-answers.ts`](src/agents/solve-answers.ts) |
 | `html_build` / `publish` | HTML + сохранение (без LLM) | [`src/html/build-lesson-html.ts`](src/html/build-lesson-html.ts) |
 
 **Human-in-the-loop:** `plan_hitl` — утверждение/правка плана; `answers` — ввод ключа ответов или авто-решение модели.
+
+**Reproduce-путь (`materialIntent=reproduce_test`):** парсер извлекает нумерованные задания (MCQ, `___`, скобки `(to study)` / `(love)`); [`mapCandidatesToPartExercises`](src/lesson-spec/map-candidates-to-spec.ts) собирает spec без LLM; при сбое fidelity — fallback на `validateExtractedPart`, без `generatePartExercises`.
+
+**Generate-путь:** только если готовых заданий нет — минимум вопросов, один доминирующий `inputKind` на часть.
 
 Модели по ролям: `OPENAI_MODEL` (базовая), опционально `OPENAI_MODEL_CLASSIFY`, `OPENAI_MODEL_PLAN`, `OPENAI_MODEL_SPEC` (алиасы `POLZA_*` тоже читаются).
 
@@ -217,8 +223,8 @@ docker compose up
 | ------- | -------- |
 | `pnpm dev` | Dev-сервер Next.js |
 | `pnpm build` / `pnpm start` | Production-сборка и запуск |
-| `pnpm test` | Vitest: extract, PDF, finalize (без сети) |
-| `pnpm test:e2e` | Живой прогон графа через LLM (`tesing-data/`) |
+| `pnpm test` | Vitest: extract, detect-intent, map-candidates, fidelity-check, finalize (без сети) |
+| `pnpm test:e2e` | Живой прогон supervisor через LLM (`tesing-data/`); проверка reproduce-пути |
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm lint` | Next.js ESLint |
 
@@ -229,7 +235,7 @@ pnpm test        # детерминированные unit/integration
 pnpm test:e2e    # полный supervisor на реальных данных; skip без API-ключа
 ```
 
-Покрытие: эвристики extract, PDF из `tesing-data/`, finalize `LessonSpec`, e2e extract-first и генерация с HITL.
+Покрытие: парсер `extractCandidates` (MCQ, gap, bracketGap, inline-нумерация), `detect-intent`, детерминированный mapper, fidelity guard, PDF из `tesing-data/`, e2e reproduce (PDF + `raw.txt`) и генерация с HITL.
 
 Конфиг: [`vitest.config.ts`](vitest.config.ts); `.env` подхватывается в [`test/setup.ts`](test/setup.ts).
 
@@ -237,4 +243,4 @@ pnpm test:e2e    # полный supervisor на реальных данных; s
 
 ## English summary
 
-Lingua-Bloom helps **teachers and tutors** turn text or PDF into an interactive HTML quiz in minutes («урок на раз-два»). Next.js 16 app with a **LangGraph** supervisor pipeline (`src/supervisor/graph.ts`), **extract-first** parsing, OpenAI-compatible LLMs, and **Supabase** (Auth + RLS). HITL pauses cover lesson-plan approval and answer keys. **Telegram**: per-teacher bot settings at `/settings/telegram`; test results are pushed when a student finishes a lesson.
+Lingua-Bloom helps **teachers and tutors** turn text or PDF into an interactive HTML quiz in minutes («урок на раз-два»). Next.js 16 app with a **LangGraph supervisor** pipeline (`@langchain/langgraph-supervisor`, `src/supervisor/graph.ts`), **extract-first** parsing with **reproduce vs generate** intent, fidelity checks, OpenAI-compatible LLMs, and **Supabase** (Auth + RLS). HITL pauses cover lesson-plan approval and answer keys. **Telegram**: per-teacher bot settings at `/settings/telegram`; test results are pushed when a student finishes a lesson.

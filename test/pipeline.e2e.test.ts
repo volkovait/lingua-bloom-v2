@@ -4,7 +4,9 @@ import path from 'node:path'
 import { Command, MemorySaver } from '@langchain/langgraph'
 import { describe, expect, it } from 'vitest'
 
+import { extractCandidates } from '@/src/extract/candidates'
 import { extractPdfText } from '@/src/extract/pdf'
+import { countQuestionsInLessonSpec } from '@/src/lesson-spec/count-lesson-questions'
 import { lessonSpecSchema, type LessonSpec } from '@/src/lesson-spec/schema'
 import { buildGenerationGraph, type GraphDeps } from '@/src/supervisor/graph'
 import type { GenerationState } from '@/src/supervisor/state'
@@ -31,6 +33,7 @@ function makeInitial(partial: Partial<GenerationState>): GenerationState {
     material: '',
     sourceType: 'text',
     mode: 'ready_material',
+    materialIntent: 'generate_from_content',
     correctAnswersHint: '',
     autoSolveRequested: false,
     materialRelevant: true,
@@ -57,13 +60,17 @@ function buildTestGraph(): { graph: ReturnType<typeof buildGenerationGraph>; get
   const deps: GraphDeps = {
     checkpointer: new MemorySaver(),
     emit: async () => {},
-    saveLesson: async (p) => {
-      saved = { spec: p.spec, htmlBody: p.htmlBody }
+    saveLesson: async (payload) => {
+      saved = { spec: payload.spec, htmlBody: payload.htmlBody }
       return 'lesson-test-id'
     },
     updateRun: async () => {},
   }
   return { graph: buildGenerationGraph(deps), getSaved: () => saved }
+}
+
+function collectInputKinds(spec: LessonSpec): Set<string> {
+  return new Set(spec.parts.flatMap((part) => part.exercises.map((exercise) => exercise.inputKind ?? 'radio')))
 }
 
 /** Прогоняет граф до конца, автоматически проходя HITL-паузы (план — принять, ответы — авто). */
@@ -88,9 +95,12 @@ async function driveToEnd(
 
 suite('supervisor pipeline (реальный LLM)', () => {
   it(
-    'extract-first: grammar-PDF → валидная спецификация и HTML',
+    'extract-first: grammar-PDF → reproduce без лишних вопросов',
     async () => {
       const material = await extractPdfText(readPdf('1_page.pdf'))
+      const { candidates } = extractCandidates(material)
+      expect(candidates.length).toBeGreaterThan(0)
+
       const { graph, getSaved } = buildTestGraph()
       const state = await driveToEnd(
         graph,
@@ -106,11 +116,14 @@ suite('supervisor pipeline (реальный LLM)', () => {
       )
 
       expect(state.errorCode).toBe('')
+      expect(state.materialIntent).toBe('reproduce_test')
       expect(state.lessonId).toBe('lesson-test-id')
       const saved = getSaved()
       expect(saved).not.toBeNull()
       expect(lessonSpecSchema.safeParse(saved!.spec).success).toBe(true)
       expect(saved!.spec.parts.length).toBeGreaterThan(0)
+      expect(countQuestionsInLessonSpec(saved!.spec)).toBeLessThanOrEqual(candidates.length)
+      expect(collectInputKinds(saved!.spec).size).toBeLessThanOrEqual(2)
       expect(saved!.htmlBody).toContain('<!DOCTYPE html>')
       expect(saved!.htmlBody).toContain('lesson-spec')
     },
@@ -118,9 +131,12 @@ suite('supervisor pipeline (реальный LLM)', () => {
   )
 
   it(
-    'raw-материал: "раскройте скобки" → проходит HITL и завершается уроком',
+    'raw-материал: «раскройте скобки» → reproduce, ≥10 gapFill, без лишних типов',
     async () => {
       const material = readFileSync(path.join(DATA_DIR, 'raw.txt'), 'utf8')
+      const { candidates } = extractCandidates(material)
+      expect(candidates.length).toBeGreaterThanOrEqual(10)
+
       const { graph, getSaved } = buildTestGraph()
       const state = await driveToEnd(
         graph,
@@ -136,11 +152,19 @@ suite('supervisor pipeline (реальный LLM)', () => {
       )
 
       expect(state.errorCode).toBe('')
+      expect(state.materialIntent).toBe('reproduce_test')
       expect(state.lessonId).toBe('lesson-test-id')
       const saved = getSaved()
       expect(saved).not.toBeNull()
       expect(lessonSpecSchema.safeParse(saved!.spec).success).toBe(true)
       expect(saved!.spec.parts.length).toBeGreaterThan(0)
+      expect(countQuestionsInLessonSpec(saved!.spec)).toBeGreaterThanOrEqual(10)
+      expect(countQuestionsInLessonSpec(saved!.spec)).toBeLessThanOrEqual(candidates.length)
+      const kinds = collectInputKinds(saved!.spec)
+      expect(kinds.size).toBeLessThanOrEqual(2)
+      expect(kinds.has('gapFill')).toBe(true)
+      expect(kinds.has('matchPairs')).toBe(false)
+      expect(kinds.has('wordOrder')).toBe(false)
     },
     240_000,
   )

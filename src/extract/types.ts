@@ -1,5 +1,5 @@
 /** Тип задания, распознанный детерминированным парсером. */
-export type CandidateKind = 'mcq' | 'trueFalse' | 'gap'
+export type CandidateKind = 'mcq' | 'trueFalse' | 'gap' | 'bracketGap'
 
 export type CandidateOption = {
   /** Исходная метка варианта (A/B/1/…), как встретилась в тексте. */
@@ -16,7 +16,8 @@ export type ExtractedCandidate = {
   options: CandidateOption[]
   /**
    * Правильный ответ, если он ЯВНО присутствует в источнике (ключ/метка или true/false).
-   * null — ответа в источнике нет (его нужно будет получить от пользователя или solve-агента).
+   * Для bracketGap — базовая форма из скобки (например «study», «not drink»).
+   * null — ответа в источнике нет.
    */
   answer: string | null
   /** Смещение в исходном тексте (для сортировки/дебага). */
@@ -25,6 +26,5 @@ export type ExtractedCandidate = {
 
 export type ExtractionResult = {
   candidates: ExtractedCandidate[]
-  /** Доля покрытия: сколько распознано относительно эвристической оценки числа вопросов. */
   hasReadyExercises: boolean
 }

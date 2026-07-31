@@ -10,7 +10,9 @@ import { validateExtractedPart } from '@/src/agents/validate-extracted'
 import { extractCandidates } from '@/src/extract/candidates'
 import { buildLessonHtmlFromSpec } from '@/src/html/build-lesson-html'
 import { sanitizeLessonHtmlForDelivery } from '@/src/html/sanitize'
+import { checkSpecFidelity } from '@/src/lesson-spec/fidelity-check'
 import { finalizeLessonSpec } from '@/src/lesson-spec/finalize'
+import { mapCandidatesToPartExercises } from '@/src/lesson-spec/map-candidates-to-spec'
 import { lessonSpecSchema, type LessonExercise } from '@/src/lesson-spec/schema'
 
 import type { GraphDeps } from './types'
@@ -36,16 +38,20 @@ export function createNodeHandlers(deps: GraphDeps) {
     classify: async (state: GenerationState) => {
       await log(state.runId, 'classify', '🧭', 'Классификация материала')
       try {
-        const mode = await classifyMaterial({ title: state.title, material: state.material })
+        const { mode, materialIntent } = await classifyMaterial({ title: state.title, material: state.material })
         await deps.updateRun({ runId: state.runId, status: 'running', phase: 'classified', mode })
         await log(
           state.runId,
           'classify',
           '✅',
           'Тип материала определён',
-          mode === 'raw_material' ? 'Сначала план урока' : 'Готовый материал — сразу к тесту',
+          materialIntent === 'reproduce_test'
+            ? 'Готовый тест — воспроизведение без дополнений'
+            : mode === 'raw_material'
+              ? 'Сначала план урока'
+              : 'Готовый материал — генерация теста',
         )
-        return { mode, phase: 'classified', errorCode: '', errorMessage: '' }
+        return { mode, materialIntent, phase: 'classified', errorCode: '', errorMessage: '' }
       } catch (error) {
         const message = errMessage(error, 'Не удалось классифицировать материал.')
         await log(state.runId, 'classify', '⚠️', 'Ошибка классификации', message.slice(0, 500))
@@ -170,30 +176,81 @@ export function createNodeHandlers(deps: GraphDeps) {
         const assembled: Array<{ title: string; exercises: LessonExercise[] }> = []
         const hint = state.correctAnswersHint.trim() || undefined
 
+        const finalizeOrNull = (partsToFinalize: Array<{ title: string; exercises: LessonExercise[] }>) => {
+          try {
+            return finalizeLessonSpec({ title: state.title, parts: partsToFinalize })
+          } catch {
+            return null
+          }
+        }
+
         for (let index = 0; index < parts.length; index += 1) {
           const part = parts[index]
           const partTitle = part.title.trim() || `Часть ${index + 1}`
           const { candidates, hasReadyExercises } = extractCandidates(part.text)
+          const useReproduce = state.materialIntent === 'reproduce_test' || hasReadyExercises
 
           try {
-            let result
-            if (hasReadyExercises) {
-              result = await validateExtractedPart({
-                lessonTitle: state.title,
-                partTitle,
-                partText: part.text,
-                candidates,
-                answersHint: hint,
-              })
-              await log(
-                state.runId,
-                'assemble_spec',
-                '📎',
-                `Часть «${partTitle}»: извлечено из источника`,
-                `Кандидатов: ${candidates.length}, упражнений: ${result.exercises.length}`,
-              )
+            if (useReproduce) {
+              if (candidates.length === 0) {
+                throw new Error(
+                  'Материал помечен как готовый тест, но парсер не нашёл заданий для воспроизведения.',
+                )
+              }
+
+              let exercises: LessonExercise[] | null = null
+
+              try {
+                const mapped = mapCandidatesToPartExercises({ candidates, partTitle })
+                const trial = finalizeOrNull([{ title: partTitle, exercises: mapped.exercises }])
+                if (trial) {
+                  const fidelity = checkSpecFidelity(trial.spec, candidates)
+                  if (fidelity.ok) {
+                    exercises = mapped.exercises
+                    await log(
+                      state.runId,
+                      'assemble_spec',
+                      '📎',
+                      `Часть «${partTitle}»: воспроизведено из источника`,
+                      `Кандидатов: ${candidates.length}, упражнений: ${mapped.exercises.length}`,
+                    )
+                  }
+                }
+              } catch {
+                // Пробуем LLM-нормализацию ниже.
+              }
+
+              if (!exercises) {
+                const validated = await validateExtractedPart({
+                  lessonTitle: state.title,
+                  partTitle,
+                  partText: part.text,
+                  candidates,
+                  answersHint: hint,
+                })
+                const trial = finalizeOrNull([{ title: partTitle, exercises: validated.exercises }])
+                if (!trial) {
+                  throw new Error('Не удалось финализовать воспроизведённую спецификацию.')
+                }
+                const fidelity = checkSpecFidelity(trial.spec, candidates)
+                if (!fidelity.ok) {
+                  throw new Error(
+                    `BUILD_SPEC_FIDELITY_FAILED: ${fidelity.warnings.join('; ')}`,
+                  )
+                }
+                exercises = validated.exercises
+                await log(
+                  state.runId,
+                  'assemble_spec',
+                  '📎',
+                  `Часть «${partTitle}»: нормализовано LLM`,
+                  `Кандидатов: ${candidates.length}, упражнений: ${validated.exercises.length}`,
+                )
+              }
+
+              assembled.push({ title: partTitle, exercises })
             } else {
-              result = await generatePartExercises({
+              const generated = await generatePartExercises({
                 lessonTitle: state.title,
                 partTitle,
                 partText: part.text,
@@ -204,11 +261,14 @@ export function createNodeHandlers(deps: GraphDeps) {
                 'assemble_spec',
                 '✨',
                 `Часть «${partTitle}»: сгенерировано`,
-                `Готовых заданий не найдено — упражнений: ${result.exercises.length}`,
+                `Упражнений: ${generated.exercises.length}`,
               )
+              assembled.push({ title: partTitle, exercises: generated.exercises })
             }
-            assembled.push({ title: partTitle, exercises: result.exercises })
           } catch (partError) {
+            if (useReproduce) {
+              throw partError
+            }
             await log(
               state.runId,
               'assemble_spec',
@@ -219,17 +279,9 @@ export function createNodeHandlers(deps: GraphDeps) {
           }
         }
 
-        const finalizeOrNull = (partsToFinalize: Array<{ title: string; exercises: LessonExercise[] }>) => {
-          try {
-            return finalizeLessonSpec({ title: state.title, parts: partsToFinalize })
-          } catch {
-            return null
-          }
-        }
-
         let finalized = assembled.length > 0 ? finalizeOrNull(assembled) : null
 
-        if (!finalized) {
+        if (!finalized && state.materialIntent !== 'reproduce_test') {
           await log(state.runId, 'assemble_spec', '🔁', 'Пересборка по всему материалу')
           const whole = await generatePartExercises({
             lessonTitle: state.title,
@@ -258,8 +310,11 @@ export function createNodeHandlers(deps: GraphDeps) {
         }
       } catch (error) {
         const message = errMessage(error, 'Не удалось собрать спецификацию теста.')
+        const errorCode = message.includes('BUILD_SPEC_FIDELITY_FAILED')
+          ? 'BUILD_SPEC_FIDELITY_FAILED'
+          : 'BUILD_SPEC_FAILED'
         await log(state.runId, 'assemble_spec', '⚠️', 'Ошибка сборки спецификации', message.slice(0, 800))
-        return { errorCode: 'BUILD_SPEC_FAILED', errorMessage: message, phase: 'spec_failed' }
+        return { errorCode, errorMessage: message, phase: 'spec_failed' }
       }
     },
 

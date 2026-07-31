@@ -23,6 +23,7 @@ function buildInitialState(input: {
     material: '',
     sourceType: 'text' as const,
     mode: 'ready_material' as const,
+    materialIntent: 'generate_from_content' as const,
     correctAnswersHint: '',
     autoSolveRequested: false,
     materialRelevant: true,
