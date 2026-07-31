@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { copyCookiesTo, updateSession } from '@/src/auth/update-session'
 
-const PROTECTED_PREFIXES = ['/', '/upload', '/learn', '/history']
+const PROTECTED_PREFIXES = ['/', '/upload', '/learn', '/history', '/settings']
 const PUBLIC_EXACT = new Set(['/auth/login', '/auth/sign-up', '/auth/sign-up-success', '/auth/error'])
 const PUBLIC_PREFIXES = ['/auth/callback', '/auth/signout', '/api/health']
 

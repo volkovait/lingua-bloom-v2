@@ -1425,6 +1425,32 @@
     }
   }
 
+  function sendResultsToTelegram(studentName, result) {
+    var meta = window.__LESSON_META__;
+    if (!meta || !meta.lessonId) return;
+
+    fetch("/api/lessons/" + encodeURIComponent(meta.lessonId) + "/submit-results", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        studentName: studentName,
+        score: result.score,
+        max: result.max,
+        rows: result.rows.map(function (row) {
+          return {
+            serial: row.serial,
+            ok: row.ok,
+            studentLine: row.studentLine,
+            correctLine: row.correctLine,
+          };
+        }),
+      }),
+    }).catch(function (error) {
+      console.warn("[lesson-test] telegram submit failed", error);
+    });
+  }
+
   function lockTest() {
     document.body.classList.add("test-locked");
     var nodes = document.querySelectorAll(
@@ -1490,6 +1516,8 @@
       }
       if (panel) panel.classList.add("visible");
       console.log("[lesson-test] finish, results shown for", studentName);
+
+      sendResultsToTelegram(studentName, result);
 
       lockTest();
       saveFormState();

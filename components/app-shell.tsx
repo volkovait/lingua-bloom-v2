@@ -12,11 +12,12 @@ import { cn } from '@/lib/utils'
 
 const SIGNOUT_FORM_ID = 'app-shell-signout'
 
-export type NavKey = 'create' | 'history'
+export type NavKey = 'create' | 'history' | 'settings'
 
 const NAV_ITEMS: { href: string; label: string; key: NavKey }[] = [
   { href: '/', label: LABELS.CHAT_WITH_AI, key: 'create' },
   { href: '/history', label: LABELS.NAV_HISTORY_TESTS, key: 'history' },
+  { href: '/settings/telegram', label: LABELS.NAV_TELEGRAM_SETTINGS, key: 'settings' },
 ]
 
 interface AppShellProps {

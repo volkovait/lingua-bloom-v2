@@ -78,4 +78,10 @@ export const env = {
           : 'http://localhost:3000',
       ),
   },
+  telegram: {
+    /** Глобальный fallback, если у учителя нет настроек в профиле. */
+    enabled: () => Boolean(firstEnv('TELEGRAM_BOT_TOKEN') && firstEnv('TELEGRAM_CHAT_ID')),
+    botToken: () => required('TELEGRAM_BOT_TOKEN'),
+    chatId: () => required('TELEGRAM_CHAT_ID'),
+  },
 } as const

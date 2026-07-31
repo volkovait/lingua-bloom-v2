@@ -6,6 +6,7 @@ export const LABELS = {
   BRAND_LOGO_ALT: 'Lingua-Bloom',
   CHAT_WITH_AI: 'Чат с ИИ',
   NAV_HISTORY_TESTS: 'История тестов',
+  NAV_TELEGRAM_SETTINGS: 'Настройки профиля',
   SIGN_OUT: 'Выход',
 
   HISTORY_SUBTITLE: 'Созданные интерактивные тесты',
@@ -97,16 +98,21 @@ export const LABELS = {
   AUTH_ERROR_CODE_PREFIX: 'Code error: ',
   AUTH_ERROR_UNSPECIFIED: 'An unspecified error occurred.',
 
+  LESSON_RUN_TAB_TEXT: 'Текстовый ввод',
+  LESSON_RUN_TAB_FILES: 'Подгрузка файлов',
   LESSON_RUN_MATERIAL_SLOT: 'Материал',
   LESSON_RUN_MATERIAL_HINT:
-    'Вставьте текст или загрузите PDF — сценарий (план урока или сразу тест) выберет модель по содержанию.',
+    'Вставьте текст — сценарий (план урока или сразу тест) выберет модель по содержанию.',
+  LESSON_RUN_FILE_NOTES_LABEL: 'Пояснение к тестам',
+  LESSON_RUN_FILE_NOTES_HINT:
+    'Необязательно: уточните контекст, уровень учеников или что важно учесть при генерации.',
+  LESSON_RUN_FILE_NOTES_PLACEHOLDER:
+    'Например: это домашка по Present Perfect, нужны задания на выбор и пропуски.',
   LESSON_RUN_START: 'Запустить генерацию',
   LESSON_RUN_SEND_RESUME: 'Продолжить',
   LESSON_RUN_PLAN_LABEL: 'Правки к плану (оставьте пустым, чтобы принять как есть)',
   LESSON_RUN_ANSWERS_LABEL: 'Правильные ответы (свободная форма)',
   LESSON_RUN_AUTO_BUTTON: 'Авто-ответы модели (точность не гарантируется)',
-  LESSON_RUN_PREFER_AUTO_ANSWERS:
-    'Сразу авто-ответы модели: не спрашивать эталонные ответы (точность не гарантируется)',
   LESSON_RUN_ANSWERS_MODE_MANUAL: 'Ввести ответы',
   LESSON_RUN_ANSWERS_MODE_AUTO: 'Автоответы',
   LESSON_RUN_LOG_TITLE: 'Шаги',
@@ -121,4 +127,46 @@ export const LABELS = {
   LESSON_RUN_OPEN: 'Открыть тест',
   LESSON_RUN_FAILED_TITLE: 'Генерация остановлена',
   LESSON_RUN_ACCEPT_PLAN: 'Принять план и продолжить',
+
+  SETTINGS_PROFILE_PAGE_TITLE: 'Настройки профиля',
+  SETTINGS_PROFILE_GUIDE_TITLE: 'Как подключить Telegram',
+  SETTINGS_PROFILE_GUIDE_INTRO:
+    'После настройки бота вы будете получать в Telegram ФИО студента, баллы и ответы, когда он завершит тест.',
+  SETTINGS_PROFILE_GUIDE_STEP_1:
+    'Откройте в Telegram @BotFather и отправьте команду /newbot — придумайте имя и username для бота.',
+  SETTINGS_PROFILE_GUIDE_STEP_2:
+    'Скопируйте Bot Token из ответа BotFather и вставьте его в поле ниже.',
+  SETTINGS_PROFILE_GUIDE_STEP_3:
+    'Найдите своего нового бота в Telegram и отправьте ему /start — без этого сообщения бот не сможет писать вам.',
+  SETTINGS_PROFILE_GUIDE_STEP_4:
+    'Узнайте свой Chat ID: напишите @userinfobot или @getidsbot и скопируйте число из поля Id.',
+  SETTINGS_PROFILE_GUIDE_STEP_5:
+    'Заполните форму ниже, нажмите «Сохранить», затем «Отправить тест» — должно прийти пробное сообщение.',
+  SETTINGS_PROFILE_GUIDE_FOOTER:
+    'Токен бота хранится только на сервере и не показывается повторно. Не делитесь им с другими людьми.',
+
+  SETTINGS_TELEGRAM_PAGE_TITLE: 'Настройки профиля',
+  SETTINGS_TELEGRAM_TITLE: 'Результаты тестов',
+  SETTINGS_TELEGRAM_SUBTITLE:
+    'Когда студент завершает тест, бот отправит вам ФИО, баллы и ответы по каждому вопросу.',
+  SETTINGS_TELEGRAM_ENABLED: 'Отправлять результаты тестов в Telegram',
+  SETTINGS_TELEGRAM_CHAT_ID: 'Chat ID',
+  SETTINGS_TELEGRAM_CHAT_ID_HINT:
+    'Ваш числовой chat id. Узнать можно у @userinfobot или @getidsbot в Telegram.',
+  SETTINGS_TELEGRAM_BOT_TOKEN: 'Bot Token',
+  SETTINGS_TELEGRAM_BOT_TOKEN_PLACEHOLDER: '123456789:AAH...',
+  SETTINGS_TELEGRAM_BOT_TOKEN_KEEP: 'Токен сохранён — введите новый, только если нужно заменить',
+  SETTINGS_TELEGRAM_BOT_TOKEN_HINT:
+    'Создайте бота через @BotFather, скопируйте token и напишите боту /start в личку. При первом сохранении token обязателен.',
+  SETTINGS_TELEGRAM_CHAT_ID_REQUIRED: 'Укажите Telegram Chat ID.',
+  SETTINGS_TELEGRAM_TOKEN_REQUIRED:
+    'Укажите Bot Token от @BotFather. Если token уже сохранялся раньше, поле можно оставить пустым.',
+  SETTINGS_TELEGRAM_SAVE: 'Сохранить',
+  SETTINGS_TELEGRAM_TEST: 'Отправить тест',
+  SETTINGS_TELEGRAM_LOADING: 'Загрузка настроек…',
+  SETTINGS_TELEGRAM_SAVE_SUCCESS: 'Настройки сохранены.',
+  SETTINGS_TELEGRAM_TEST_SUCCESS: 'Тестовое сообщение отправлено в Telegram.',
+  SETTINGS_TELEGRAM_LOAD_ERROR: 'Не удалось загрузить настройки.',
+  SETTINGS_TELEGRAM_SAVE_ERROR: 'Не удалось сохранить настройки.',
+  SETTINGS_TELEGRAM_TEST_ERROR: 'Не удалось отправить тестовое сообщение.',
 } as const

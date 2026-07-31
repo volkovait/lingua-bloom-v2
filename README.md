@@ -9,6 +9,7 @@
 - **Создание теста в чате** — главная `/`: текст и/или PDF, таймлайн шагов пайплайна, HITL (план урока, эталонные ответы) — [`components/chat-run-workspace.tsx`](components/chat-run-workspace.tsx), API — [`app/api/runs/`](app/api/runs/).
 - **История тестов** — список созданных уроков — [`app/history/page.tsx`](app/history/page.tsx).
 - **Прохождение урока** — iframe с интерактивным HTML — [`app/learn/[id]/page.tsx`](app/learn/[id]/page.tsx).
+- **Уведомления в Telegram** — после «Завершить тест» учителю уходит ФИО студента, баллы и ответы по вопросам; настройка в профиле — [`app/settings/telegram/page.tsx`](app/settings/telegram/page.tsx).
 - **Регистрация и вход** — email/пароль и Google ([`app/auth/login`](app/auth/login), [`app/auth/sign-up`](app/auth/sign-up)); колбэк OAuth — [`app/auth/callback/route.ts`](app/auth/callback/route.ts).
 - **Режим без авторизации** — `AUTH_DISABLED=1` для локальной разработки (записи под impersonate user id).
 
@@ -26,7 +27,8 @@
 | `src/supervisor/` | LangGraph: state, graph, run-executor, Postgres checkpointer |
 | `src/lesson-spec/` | Zod-схема урока, normalize / coerce / prune / finalize |
 | `src/html/` | Сборка и санация HTML урока |
-| `src/db/` | Клиенты Supabase + runs / events / lessons |
+| `src/db/` | Клиенты Supabase + runs / events / lessons / telegram settings |
+| `src/telegram/` | Отправка результатов теста в Telegram Bot API |
 | `src/auth/` | `AUTH_DISABLED` и сессия |
 | `lib/` | UI-константы, утилиты auth |
 | `public/lesson-runtime.js` | Клиентский рантайм интерактивного теста |
@@ -120,8 +122,51 @@ flowchart TD
 | `lessons` | Готовый урок: title, source_type, html_body, spec_json, meta |
 | `lesson_generation_runs` | Прогон пайплайна: status, phase, mode, thread_id, payload |
 | `lesson_generation_events` | Append-only лог шагов для UI |
+| `user_telegram_settings` | Персональные Bot Token и Chat ID учителя для уведомлений |
 
 LangGraph checkpointer создаёт свои таблицы через `PostgresSaver.setup()` (нужен `SUPABASE_DB_URL`).
+
+Миграция Telegram: [`20260731120000_user_telegram_settings.sql`](supabase/migrations/20260731120000_user_telegram_settings.sql).
+
+## Telegram: результаты тестов
+
+Когда студент нажимает **«Завершить тест и показать результаты»**, приложение отправляет учителю сообщение в Telegram:
+
+- название теста;
+- ФИО студента;
+- баллы;
+- ответы по каждому вопросу (✅/❌ и верные ответы для ошибок).
+
+### Настройка (для учителя)
+
+1. Откройте **Настройки профиля** в шапке (`/settings/telegram`).
+2. Создайте бота через [@BotFather](https://t.me/BotFather) (`/newbot`) и скопируйте **Bot Token**.
+3. Напишите боту `/start` в личные сообщения.
+4. Узнайте свой **Chat ID** (например, через [@userinfobot](https://t.me/userinfobot)).
+5. Заполните форму, нажмите **Сохранить**, затем **Отправить тест** для проверки.
+
+Токен бота хранится в Supabase и **не показывается** повторно в интерфейсе (только флаг «сохранён»).
+
+### Технически
+
+| Компонент | Путь |
+| --------- | ---- |
+| Страница настроек | [`app/settings/telegram/page.tsx`](app/settings/telegram/page.tsx) |
+| API сохранения | `GET/PUT /api/settings/telegram` |
+| API тестового сообщения | `POST /api/settings/telegram/test` |
+| Отправка после теста | `POST /api/lessons/:id/submit-results` ← [`public/lesson-runtime.js`](public/lesson-runtime.js) |
+| Хранение credentials | [`src/db/telegram-settings.ts`](src/db/telegram-settings.ts) |
+
+Перед первым использованием примените миграцию `user_telegram_settings` в Supabase.
+
+Опционально для локальной разработки можно задать fallback в `.env`:
+
+```bash
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+```
+
+Если у учителя нет записи в профиле, но переменные заданы на сервере, они используются как запасной вариант.
 
 ## Переменные окружения
 
@@ -137,6 +182,7 @@ LangGraph checkpointer создаёт свои таблицы через `Postgr
 | `AUTH_DISABLED` | `1` — без логина (только локально) |
 | `AUTH_DISABLED_IMPERSONATE_USER_ID` | UUID пользователя при `AUTH_DISABLED` |
 | `NEXT_PUBLIC_APP_URL` | Origin для OAuth / post-auth redirects |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Опциональный fallback, если учитель не настроил профиль |
 
 В Supabase → Authentication → URL Configuration добавьте Redirect URL вида `{NEXT_PUBLIC_APP_URL}/auth/callback`.
 
@@ -191,4 +237,4 @@ pnpm test:e2e    # полный supervisor на реальных данных; s
 
 ## English summary
 
-Lingua-Bloom helps **teachers and tutors** turn text or PDF into an interactive HTML quiz in minutes («урок на раз-два»). Next.js 16 app with a **LangGraph** supervisor pipeline (`src/supervisor/graph.ts`), **extract-first** parsing, OpenAI-compatible LLMs, and **Supabase** (Auth + RLS). HITL pauses cover lesson-plan approval and answer keys.
+Lingua-Bloom helps **teachers and tutors** turn text or PDF into an interactive HTML quiz in minutes («урок на раз-два»). Next.js 16 app with a **LangGraph** supervisor pipeline (`src/supervisor/graph.ts`), **extract-first** parsing, OpenAI-compatible LLMs, and **Supabase** (Auth + RLS). HITL pauses cover lesson-plan approval and answer keys. **Telegram**: per-teacher bot settings at `/settings/telegram`; test results are pushed when a student finishes a lesson.

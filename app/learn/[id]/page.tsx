@@ -11,6 +11,18 @@ import { createServiceRoleClient } from '@/src/db/supabase'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+function injectLessonMeta(
+  htmlBody: string,
+  meta: { lessonId: string; title: string },
+): string {
+  const script = `<script>window.__LESSON_META__=${JSON.stringify(meta).replace(/</g, '\\u003c')}</script>`
+  const runtimeTag = '<script src="/lesson-runtime.js"></script>'
+  if (htmlBody.includes(runtimeTag)) {
+    return htmlBody.replace(runtimeTag, `${script}\n  ${runtimeTag}`)
+  }
+  return `${htmlBody}\n${script}\n${runtimeTag}`
+}
+
 export default async function LearnPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const userId = await getCurrentUserId()
@@ -19,6 +31,8 @@ export default async function LearnPage({ params }: { params: Promise<{ id: stri
   const lesson = await getLesson(createServiceRoleClient(), id)
   if (!lesson) notFound()
   if (!isAuthDisabled() && lesson.user_id !== userId) notFound()
+
+  const htmlBody = injectLessonMeta(lesson.html_body, { lessonId: id, title: lesson.title })
 
   return (
     <AppShell>
@@ -31,7 +45,7 @@ export default async function LearnPage({ params }: { params: Promise<{ id: stri
         </div>
         <iframe
           title={lesson.title}
-          srcDoc={lesson.html_body}
+          srcDoc={htmlBody}
           sandbox="allow-scripts allow-same-origin"
           className="min-h-0 w-full flex-1 border-0 bg-white"
         />
