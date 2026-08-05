@@ -113,6 +113,8 @@ export const LABELS = {
   LESSON_RUN_PLAN_LABEL: 'Правки к плану (оставьте пустым, чтобы принять как есть)',
   LESSON_RUN_ANSWERS_LABEL: 'Правильные ответы (свободная форма)',
   LESSON_RUN_AUTO_BUTTON: 'Авто-ответы модели (точность не гарантируется)',
+  LESSON_RUN_PREFER_AUTO_ANSWERS:
+    'Сразу использовать авто-ответы модели, без шага ввода ключа (точность не гарантируется).',
   LESSON_RUN_ANSWERS_MODE_MANUAL: 'Ввести ответы',
   LESSON_RUN_ANSWERS_MODE_AUTO: 'Автоответы',
   LESSON_RUN_LOG_TITLE: 'Шаги',
