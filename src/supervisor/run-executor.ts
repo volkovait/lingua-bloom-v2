@@ -5,9 +5,11 @@ import { createServiceRoleClient } from '@/src/db/supabase'
 import { saveLesson } from '@/src/db/lessons'
 import { appendEvent, updateRun } from '@/src/db/runs'
 
+import { buildGraphInvokeConfig } from '@/src/llm/tracing'
+
 import { buildGenerationGraph } from './graph'
 import { getCheckpointer } from './checkpointer'
-import { GenerationStateAnnotation, type GenerationState } from './state'
+import type { GenerationState } from './state'
 
 function buildInitialState(input: {
   userId: string
@@ -96,7 +98,12 @@ export async function runGeneration(input: {
       }),
   })
 
-  const config = { configurable: { thread_id: input.threadId }, recursionLimit: 80 }
+  const config = buildGraphInvokeConfig({
+    threadId: input.threadId,
+    runId: input.runId,
+    userId: input.userId,
+    recursionLimit: 80,
+  })
 
   const result = input.command
     ? await graph.invoke(input.command as never, config)

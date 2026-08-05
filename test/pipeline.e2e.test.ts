@@ -8,6 +8,7 @@ import { extractCandidates } from '@/src/extract/candidates'
 import { extractPdfText } from '@/src/extract/pdf'
 import { countQuestionsInLessonSpec } from '@/src/lesson-spec/count-lesson-questions'
 import { lessonSpecSchema, type LessonSpec } from '@/src/lesson-spec/schema'
+import { buildGraphInvokeConfig } from '@/src/llm/tracing'
 import { buildGenerationGraph, type GraphDeps } from '@/src/supervisor/graph'
 import type { GenerationState } from '@/src/supervisor/state'
 
@@ -79,7 +80,13 @@ async function driveToEnd(
   initial: GenerationState,
   threadId: string,
 ): Promise<GenerationState> {
-  const config = { configurable: { thread_id: threadId }, recursionLimit: 100 }
+  const config = buildGraphInvokeConfig({
+    threadId,
+    runId: initial.runId || 'e2e-run',
+    userId: initial.userId || 'e2e-user',
+    recursionLimit: 100,
+    tags: ['e2e'],
+  })
   let result = (await graph.invoke(initial, config)) as GenerationState & {
     __interrupt__?: Array<{ value: { type?: string } }>
   }

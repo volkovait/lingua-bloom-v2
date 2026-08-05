@@ -189,6 +189,12 @@ TELEGRAM_CHAT_ID=
 | `AUTH_DISABLED_IMPERSONATE_USER_ID` | UUID пользователя при `AUTH_DISABLED` |
 | `NEXT_PUBLIC_APP_URL` | Origin для OAuth / post-auth redirects |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Опциональный fallback, если учитель не настроил профиль |
+| `LANGSMITH_TRACING` / `LANGSMITH_API_KEY` / `LANGSMITH_PROJECT` | Опциональный трейсинг LangGraph в [LangSmith](https://smith.langchain.com) |
+| `LANGCHAIN_CALLBACKS_BACKGROUND` | Для Next.js обычно `false`, чтобы трейс успел отправиться |
+
+### LangSmith
+
+При `LANGSMITH_TRACING=true` и заданном `LANGSMITH_API_KEY` каждый прогон генерации (API и `pnpm test:e2e`) отправляет трейс в LangSmith: промпты/ответы LLM-узлов, metadata `runId` / `threadId`. Отдельный пакет ставить не нужно — трейсинг встроен в `@langchain/core`.
 
 В Supabase → Authentication → URL Configuration добавьте Redirect URL вида `{NEXT_PUBLIC_APP_URL}/auth/callback`.
 
